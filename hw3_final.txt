@@ -1,0 +1,49 @@
+1) Number of posts user with id 3 can reach in 4 hops #total post nodes 20,000
+
+match (u:User {Id:'3'})-[*1..4]-(p) return count(distinct(p.Id))
+
+2) Number of posts posted by a user with high reputation
+
+match (u:User) with max(toInteger(u.Reputation)) as maximum match(u:User) where 
+toInteger(u.Reputation) = maximum with u.Id as maxid match(u:User)-[:posted]->(p:Post) where 
+toInteger(u.Id) = toInteger(maxid) return toInteger(maxid) as `User Id with maximum reputation` ,count(p) as `Number of posts`
+
+3) Critics who have commented on a post but haven't voted
+
+match (b:Badge{Name:'Critic'})<-[:has]-(u) ,(u)-[:commented_on]->(p) where not 
+(u)-[:voted_on]->(p)  return u
+
+4) Users that commented on posts with id 3 and 6 
+
+match n = (u:User)-[:commented_on]->(p:Post) where all(x in p.Id where x in ['3','6'])return n
+
+5)Number of like about post that have user with most high value of badge
+
+match(u:User)-[:has]-(b:Badge), (p:Post)-[:posted]-(u)
+with max(b) as maxb,toInteger(u.Id) as uId, toInteger(max(p.FavoriteCount)) as maxfav
+return uId as `User Id `, maxfav as `Maximum favorite count`  limit 1
+
+6)Users that posted a post with a viewcount greater 10 between the age of 20 -60  that have views greater than 1000
+
+#create a node for sub query
+create(c:C{name:"query"}) with c match (u)-[:posted]-(p) where toInteger(p.ViewCount) > 10 and (toInteger(u.Age) > 20 and toInteger(u.Age) < 60)  merge (c)-[:c_contains]-(p)
+#match with the node containing sub query
+match (n:C{name:"query"})-[:c_contains]-(p)-[:posted]-(u:User) where toInteger(u.Views) > 1000 return u
+
+7)How many posts released from Istanbul, Turkey with badge name supporter?
+
+match(b:Badge{Name:"Supporter"})-[:has]-(u:User{Location:'Istanbul, Turkey'}) 
+return u.Location as `Location`, count(b) as `Num of Posts`
+
+
+8)How many down votes the post which is the most commented takes?
+
+match(p:Post) with max(toInteger(p.CommentCount)) as max
+match(p:Post)-[:posted]-(u:User) where toInteger(p.CommentCount) = max with p.Id as max_id, u.DownVotes as dv
+return toInteger(max_id) as `Post Id` ,toInteger(dv) as `Num of Down Votes`
+
+9)Comments with the biggest score 
+
+match ()-[r:commented_on]-() with max(toInteger(r.Score)) as maxScore match 
+()-[rr:commented_on]-() where toInteger(rr.Score) = maxScore return distinct maxScore as Score, rr.Comment as Comment
+
